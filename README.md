@@ -83,6 +83,16 @@ var keyMan = new ShortCutManager({
          obj.element.style.background = Math.floor(Math.random() * 2) ? 'red' : 'blue';
          obj.element.style.color = 'white';
       }
+   },{
+      combination: ['Escape'], command: function (obj) {
+         obj.obj.active(false);
+         console.log('단축키 작동을 비활성화 시킵니다');
+      }
+   },{
+      combination: ['Space'], command: function (obj) {
+         obj.obj.active(true);
+         console.log('단축키 작동을 활성화 시킵니다 - 사실 비활성화 되고 나면 작동될 수 없습니다');
+      }
    }]
 });
 ```
