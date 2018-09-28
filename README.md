@@ -2,6 +2,7 @@
 DOM에 단축키를 부여하고 관리합니다  
 사용방법은 아래의 예제로 설명을 대신합니다  
 데모는 https://codepen.io/cssbaby/pen/wYvjjo 에서 체험 가능합니다  
+키의 코드 표는 https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/keyCode 를 참조하세요  
 
 ```javascript
 new ShortCutManager({
