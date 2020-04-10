@@ -4,7 +4,16 @@
       var pointer = this;
       for (var key in options) { pointer[key] = options[key]; }
       if (pointer.special_keys === undefined) {
-         pointer.special_keys = ['ShiftLeft', 'ControlLeft', 'MetaLeft', 'AltLeft', 'ShiftRight', 'ControlRight', 'MetaRight', 'AltRight'];
+         pointer.special_keys = [
+            'ShiftLeft',
+            'ControlLeft',
+            'MetaLeft',
+            'AltLeft',
+            'ShiftRight',
+            'ControlRight',
+            'MetaRight',
+            'AltRight'
+         ];
       }
       if (pointer.active_mode === undefined) {
          pointer.active_mode = true;
@@ -22,15 +31,20 @@
             pointer.release_special_key();
          }, false);
       });
+      var bubble = true;
       pointer.element.addEventListener('keyup', function (event) {
          pointer.switch_key(event.code, false);
-      }, false);
+      }, bubble);
       pointer.element.addEventListener('keydown', function (event) {
          pointer.switch_key(event.code, true);
          if (pointer.active_mode) {
             var cmd_for_key = pointer.find_short_cut(true);
-            if (cmd_for_key && cmd_for_key.prevent_default) {
-               event.preventDefault();
+            if (cmd_for_key.length) {
+               cmd_for_key.forEach(itm => {
+                  if (itm.prevent_default) {
+                     event.preventDefault();
+                  }
+               })
             }
             var any_key_pre = pointer.any_key_pressed();
             var arg = {
@@ -42,33 +56,38 @@
             };
             var co_mode = 0;
             if (pointer.spnn) {
-               if ((!any_key_pre && cmd_for_key) || any_key_pre) {
+               if ((!any_key_pre && cmd_for_key.length) || any_key_pre) {
                   co_mode = 1;
-               } else if (!any_key_pre && !cmd_for_key) {
+               } else if (!any_key_pre && !cmd_for_key.length) {
                   co_mode = 2;
                }
             } else {
-               if (cmd_for_key) {
+               if (cmd_for_key.length) {
                   co_mode = 1;
                } else {
                   co_mode = 2;
                }
             }
             if (co_mode === 1) {
-               pointer.touch_proc(cmd_for_key, function (cmd_for_key) {
-                  return cmd_for_key.command(arg);
+               cmd_for_key.forEach(itm => {
+                  pointer.touch_proc(itm, function (cmd_for_key) {
+                     cmd_for_key.command(arg);
+                  });
+
                });
             } else if (co_mode === 2) {
                var cm = pointer.find_short_cut(false);
-               if (cm) {
-                  cm.command(arg);
-                  if (cm.prevent_default) {
-                     event.preventDefault();
-                  }
+               if (cm.length) {
+                  cm.forEach(itm => {
+                     itm.command(arg);
+                     if (itm.prevent_default) {
+                        event.preventDefault();
+                     }
+                  })
                }
             }
          }
-      }, false);
+      }, bubble);
    };
    ShortCutManager.prototype = {
       get_key_history: function () {
@@ -90,47 +109,61 @@
             find = [ShortCutManager.ANYOTHERKEY];
          }
          var rtn = null;
+         var nrtn = [];
          for (var i in this.short_cut) {
-            if (rtn === null) {
-               var itm = this.short_cut[i];
-               if (itm.combination.length > 0) {
-                  var insp = [];
-                  if ((typeof itm.combination[0]) == 'object') {
-                     itm.combination.forEach(ddf => {
-                        insp.push(ddf);
-                     });
-                  } else {
-                     insp.push(itm.combination);
-                  }
-                  insp.forEach(comb => {
-                     var a1 = comb.sort();
-                     var a2 = find.sort();
-                     if (a1.length == a2.length) {
+            var itm = this.short_cut[i];
+            if (itm.combination.length > 0) {
+               var insp = [];
+               if ((typeof itm.combination[0]) == 'object') {
+                  itm.combination.forEach(ddf => {
+                     insp.push(ddf);
+                  });
+               } else {
+                  insp.push(itm.combination);
+               }
+               insp.forEach(comb => {
+                  var sorted_combi = comb.sort();
+                  if (!itm.priority) {
+                     if (sorted_combi.length == find.length) {
                         var cnt = 0;
-                        for (var j in a1) {
-                           var val1 = a1[j];
-                           var val2 = a2[j];
-                           if (false) {
-                              if ((typeof val1) == 'string') {
-                                 val1 = (val1.toUpperCase()).charCodeAt(0);
-                              }
-                              if ((typeof val2) == 'string') {
-                                 val2 = (val2.toUpperCase()).charCodeAt(0);
-                              }
-                           }
-                           if (val1 === val2) {
-                              cnt++;
-                           }
+                        for (var j in sorted_combi) {
+                           cnt += (sorted_combi[j] === find[j]) ? 1 : 0;
                         }
-                        if (a1.length == cnt) {
-                           rtn = itm;
+                        if (sorted_combi.length == cnt) {
+                           nrtn.push(itm);
                         }
                      }
-                  });
-               }
+                  } else {
+                     if (sorted_combi.length <= find.length) {
+                        var cnt = 0;
+                        for (var i = 0; i < sorted_combi.length; i++) {
+                           for (var j = 0; j < find.length; j++) {
+                              cnt += sorted_combi[i] === find[j] ? 1 : 0;
+                           }
+                        }
+                        if (sorted_combi.length == cnt) {
+                           nrtn.push(itm);
+                        }
+                     }
+                  }
+               });
             }
          }
-         return !rtn ? null : rtn;
+         var lrtn = [];
+         for (var i = 0; i < 2; i++) {
+            nrtn.forEach(di => {
+               if (i == 0) {
+                  if (di.priority) {
+                     lrtn.push(di);
+                  }
+               } else {
+                  if (!di.priority) {
+                     lrtn.push(di);
+                  }
+               }
+            });
+         }
+         return lrtn;
       },
       any_key_pressed: function () {
          var pr = false;
